@@ -2,8 +2,9 @@ name: Collect GitHub Analytics Data
 
 on:
   schedule:
-    # Runs every day at 02:00 UTC. Adjust as needed (cron syntax: min hour day month weekday)
-    - cron: "0 2 * * *"
+    # Runs every 30 minutes. GitHub Actions schedules are best-effort and
+    # can be delayed under load — don't expect exact timing.
+    - cron: "*/30 * * * *"
   workflow_dispatch:  # lets you trigger it manually from the Actions tab too
 
 jobs:
@@ -26,4 +27,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REPOS_PER_RUN: "20"
         run: python collector.py

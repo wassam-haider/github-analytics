@@ -18,19 +18,28 @@ from datetime import datetime
 GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
 DATABASE_URL = os.environ["DATABASE_URL"]
 
+# How many repos to process in a single run. Keep this modest per-run so
+# frequent schedules (e.g. every 30 min) don't burn the 5,000 req/hour limit.
+# Each repo costs ~1 (info) + up to ~12 (contributors/commits/pulls/issues pages)
+# so ~13 requests/repo. REPOS_PER_RUN=20 -> ~260 requests/run, safe at 30-min cadence.
+REPOS_PER_RUN = int(os.environ.get("REPOS_PER_RUN", "20"))
+
+# Search queries used to discover repos dynamically (Phase 2 of the plan).
+# Add/remove queries to widen or narrow the categories you track.
+SEARCH_QUERIES = [
+    "stars:>5000 language:Python",
+    "stars:>5000 language:JavaScript",
+    "stars:>5000 language:TypeScript",
+    "stars:>5000 language:Go",
+    "stars:>5000 language:Rust",
+    "stars:>5000 language:Java",
+    "stars:>5000 language:C++",
+]
+
 HEADERS = {
     "Authorization": f"Bearer {GITHUB_TOKEN}",
     "Accept": "application/vnd.github+json",
 }
-
-# Repos to track — expand this list over time or pull dynamically via Search API
-REPOS = [
-    "microsoft/vscode",
-    "facebook/react",
-    "tensorflow/tensorflow",
-    "pytorch/pytorch",
-    "vuejs/vue",
-]
 
 
 def gh_get(url, params=None):
@@ -50,6 +59,38 @@ def parse_dt(value):
     if not value:
         return None
     return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+
+
+def discover_repos(cur, limit):
+    """
+    Pull candidate repos from the Search API across SEARCH_QUERIES,
+    skipping ones already collected in the last 6 hours (so a 30-min
+    schedule doesn't just hammer the same repos every run).
+    """
+    cur.execute(
+        """
+        SELECT full_name FROM repositories
+        WHERE collected_at > NOW() - INTERVAL '6 hours'
+        """
+    )
+    recently_collected = {row[0] for row in cur.fetchall()}
+
+    candidates = []
+    seen = set()
+    for query in SEARCH_QUERIES:
+        if len(candidates) >= limit:
+            break
+        url = "https://api.github.com/search/repositories"
+        data = gh_get(url, params={"q": query, "sort": "stars", "order": "desc", "per_page": 30}).json()
+        for item in data.get("items", []):
+            full_name = item["full_name"]
+            if full_name in seen or full_name in recently_collected:
+                continue
+            seen.add(full_name)
+            candidates.append(full_name)
+            if len(candidates) >= limit:
+                break
+    return candidates
 
 
 def collect_repo(cur, owner_repo):
@@ -89,6 +130,9 @@ def collect_contributors(cur, owner_repo, repo_id):
                 """
                 INSERT INTO contributors (repo_id, username, contributions, collected_at)
                 VALUES (%s, %s, %s, NOW())
+                ON CONFLICT (repo_id, username) DO UPDATE SET
+                    contributions = EXCLUDED.contributions,
+                    collected_at = NOW()
                 """,
                 (repo_id, c["login"], c["contributions"]),
             )
@@ -175,7 +219,11 @@ def main():
     conn.autocommit = False
     cur = conn.cursor()
 
-    for owner_repo in REPOS:
+    print(f"Discovering up to {REPOS_PER_RUN} repos to collect...")
+    repos = discover_repos(cur, REPOS_PER_RUN)
+    print(f"Found {len(repos)} repos this run: {repos}")
+
+    for owner_repo in repos:
         print(f"Collecting: {owner_repo}")
         try:
             repo_id = collect_repo(cur, owner_repo)

@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS repositories (
     id BIGINT PRIMARY KEY,
     name TEXT NOT NULL,
-    full_name TEXT,
+    full_name TEXT UNIQUE NOT NULL,
     stars INT,
     forks INT,
     watchers INT,
@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS contributors (
     repo_id BIGINT REFERENCES repositories(id),
     username TEXT NOT NULL,
     contributions INT,
-    collected_at TIMESTAMP DEFAULT NOW()
+    collected_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (repo_id, username)
 );
 
 CREATE TABLE IF NOT EXISTS commits (

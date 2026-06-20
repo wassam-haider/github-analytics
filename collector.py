@@ -22,7 +22,7 @@ DATABASE_URL = os.environ["DATABASE_URL"]
 # frequent schedules (e.g. every 30 min) don't burn the 5,000 req/hour limit.
 # Each repo costs ~1 (info) + up to ~12 (contributors/commits/pulls/issues pages)
 # so ~13 requests/repo. REPOS_PER_RUN=20 -> ~260 requests/run, safe at 30-min cadence.
-REPOS_PER_RUN = int(os.environ.get("REPOS_PER_RUN", "20"))
+REPOS_PER_RUN = int(os.environ.get("REPOS_PER_RUN", "10"))
 
 # Search queries used to discover repos dynamically (Phase 2 of the plan).
 # Add/remove queries to widen or narrow the categories you track.

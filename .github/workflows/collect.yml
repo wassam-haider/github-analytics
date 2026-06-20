@@ -1,0 +1,29 @@
+name: Collect GitHub Analytics Data
+
+on:
+  schedule:
+    # Runs every day at 02:00 UTC. Adjust as needed (cron syntax: min hour day month weekday)
+    - cron: "0 2 * * *"
+  workflow_dispatch:  # lets you trigger it manually from the Actions tab too
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run collector
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_API_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python collector.py

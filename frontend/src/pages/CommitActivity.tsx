@@ -8,7 +8,7 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://backend-fawn-omega-20.vercel.app/api';
 
 interface TrendPoint { period: string; commit_count: number; language?: string; }
 

@@ -161,6 +161,109 @@ def predict_growth(repo_id: int):
         cur.close()
         conn.close()
 
+@app.get("/api/repos/top")
+def get_top_repos():
+    """Top 20 repositories by stars with forks, commit count, and health score."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT
+                r.id,
+                r.full_name AS name,
+                r.language,
+                r.stars,
+                r.forks,
+                (SELECT COUNT(*) FROM commits c WHERE c.repo_id = r.id) AS commit_count,
+                h.health_score
+            FROM repositories r
+            LEFT JOIN (
+                SELECT repo_id, health_score
+                FROM repo_health_scores
+            ) h ON h.repo_id = r.id
+            ORDER BY r.stars DESC
+            LIMIT 20
+        """)
+        return cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/commits/trend")
+def get_commit_trend():
+    """Commit counts bucketed by day for time-series visualization."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT
+                DATE_TRUNC('day', c.created_at)::date::text AS period,
+                COUNT(*) AS commit_count,
+                r.language
+            FROM commits c
+            JOIN repositories r ON r.id = c.repo_id
+            WHERE c.created_at IS NOT NULL
+            GROUP BY period, r.language
+            ORDER BY period
+        """)
+        return cur.fetchall()
+    except Exception:
+        # Fallback if created_at column doesn't exist yet
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/api/predictions/top-repos")
+def get_top_growth_predictions():
+    """Top 10 repos predicted to gain the most stars, using the loaded RandomForest model."""
+    if ML_MODEL is None:
+        raise HTTPException(status_code=503, detail="ML Model is not loaded")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT
+                r.id,
+                r.full_name AS name,
+                r.stars,
+                r.forks,
+                (SELECT COUNT(*) FROM contributors co WHERE co.repo_id = r.id) AS contributors_count,
+                (SELECT COUNT(*) FROM commits com WHERE com.repo_id = r.id) AS commit_frequency
+            FROM repositories r
+            ORDER BY r.stars DESC
+            LIMIT 50
+        """)
+        repos = cur.fetchall()
+
+        results = []
+        for repo in repos:
+            features = [[
+                repo['stars']              or 0,
+                repo['forks']              or 0,
+                repo['contributors_count'] or 0,
+                repo['commit_frequency']   or 0,
+            ]]
+            predicted = ML_MODEL.predict(features)[0]
+            results.append({
+                "repo_id":         repo['id'],
+                "name":            repo['name'],
+                "current_stars":   repo['stars'],
+                "predicted_stars": round(predicted, 2),
+            })
+
+        # Sort by growth delta descending, return top 10
+        results.sort(key=lambda x: x['predicted_stars'] - x['current_stars'], reverse=True)
+        return results[:10]
+    finally:
+        cur.close()
+        conn.close()
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+

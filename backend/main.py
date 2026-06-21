@@ -203,18 +203,18 @@ def get_commit_trend():
     try:
         cur.execute("""
             SELECT
-                DATE_TRUNC('day', c.created_at)::date::text AS period,
+                DATE_TRUNC('day', c.commit_date)::date::text AS period,
                 COUNT(*) AS commit_count,
                 r.language
             FROM commits c
             JOIN repositories r ON r.id = c.repo_id
-            WHERE c.created_at IS NOT NULL
+            WHERE c.commit_date IS NOT NULL
             GROUP BY period, r.language
             ORDER BY period
         """)
         return cur.fetchall()
     except Exception:
-        # Fallback if created_at column doesn't exist yet
+        # Fallback if commit_date column doesn't exist yet
         return []
     finally:
         cur.close()

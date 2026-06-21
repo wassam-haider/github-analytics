@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://backend-fawn-omega-20.vercel.app/api';
@@ -6,10 +6,23 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://backend-fawn-omeg
 interface PredictResult { repo_id: number; current_stars: number; expected_stars_next_month: number; }
 
 export default function PredictWidget() {
-  const [repoId, setRepoId]   = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult]   = useState<PredictResult | null>(null);
-  const [error, setError]     = useState('');
+  const [repoId, setRepoId]     = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [slowLoad, setSlowLoad] = useState(false); // true if request taking >3s (HF cold-start)
+  const [result, setResult]     = useState<PredictResult | null>(null);
+  const [error, setError]       = useState('');
+  const slowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Show warm-up hint if the request takes longer than 3 seconds
+  useEffect(() => {
+    if (loading) {
+      slowTimer.current = setTimeout(() => setSlowLoad(true), 3000);
+    } else {
+      if (slowTimer.current) clearTimeout(slowTimer.current);
+      setSlowLoad(false);
+    }
+    return () => { if (slowTimer.current) clearTimeout(slowTimer.current); };
+  }, [loading]);
 
   const handlePredict = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +34,16 @@ export default function PredictWidget() {
       const res = await axios.get(`${API_BASE}/predict/${repoId.trim()}`);
       setResult(res.data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Prediction failed. Check that the ML model is trained and loaded.');
+      const detail = err.response?.data?.detail || '';
+      if (err.response?.status === 504 || detail.toLowerCase().includes('warm')) {
+        setError('Model is warming up — the inference server was sleeping. Please retry in a few seconds.');
+      } else if (err.response?.status === 503) {
+        setError('Predictions temporarily unavailable. The inference service may be restarting.');
+      } else if (err.response?.status === 404) {
+        setError(`Repository ID ${repoId.trim()} was not found in the database.`);
+      } else {
+        setError(detail || 'Prediction failed. Please try again.');
+      }
     }
     setLoading(false);
   };
@@ -33,10 +55,10 @@ export default function PredictWidget() {
     <div className="paper-card" style={{ maxWidth: 520 }}>
       <div style={{ marginBottom: 'var(--space-4)' }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-2)' }}>
-          🔮 Repo Growth Prediction
+          Repo Growth Prediction
         </h3>
         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-faint)' }}>
-          Enter a repository ID to predict expected stars next month using the DagsHub RandomForest model.
+          Enter a repository ID to predict expected stars next month using the RandomForest model hosted on Hugging Face.
         </p>
       </div>
 
@@ -66,6 +88,25 @@ export default function PredictWidget() {
         </button>
       </form>
 
+      {/* Cold-start warm-up hint */}
+      {loading && slowLoad && (
+        <div style={{
+          marginTop: 'var(--space-4)',
+          padding: 'var(--space-3) var(--space-4)',
+          background: 'var(--paper-bg)',
+          border: '1px solid var(--cream-border)',
+          borderRadius: 'var(--radius-md)',
+          fontSize: 'var(--text-sm)',
+          color: 'var(--ink-faint)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-2)',
+        }}>
+          <span className="spinner" style={{ width: 14, height: 14, flexShrink: 0 }} />
+          Warming up the inference server — free tier sleeps after inactivity. This usually takes 10–20s.
+        </div>
+      )}
+
       {result && (
         <div style={{
           marginTop: 'var(--space-5)',
@@ -93,7 +134,7 @@ export default function PredictWidget() {
             </div>
           </div>
           <div className="forecast-disclaimer" style={{ marginTop: 'var(--space-4)' }}>
-            ◌ Projected — based on RandomForest model (DagsHub registry)
+            ◌ RandomForest model — served via Hugging Face Spaces
           </div>
         </div>
       )}

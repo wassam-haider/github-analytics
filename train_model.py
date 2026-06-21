@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, r2_score
 import mlflow.sklearn
 import dagshub
+import joblib
 
 def get_db_connection():
     database_url = os.environ.get("DATABASE_URL", "postgresql://neondb_owner:npg_vDo51mBiPWMu@ep-soft-fire-at2q1e9e-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
@@ -79,6 +80,10 @@ def main():
         r2 = r2_score(y_test, preds)
         
         print(f"Model trained! MAE: {mae:.2f}, R2: {r2:.2f}")
+
+        # Export lightweight model file for Hugging Face Space inference
+        joblib.dump(model, "model.pkl")
+        print("Model exported to model.pkl for HF Space deployment.")
 
         mlflow.log_param("n_estimators", 100)
         mlflow.log_param("features", ", ".join(features))

@@ -1,0 +1,4 @@
+# Ignore large model file from main git repo — CI pushes it directly to the HF Space repo
+model.pkl
+__pycache__/
+*.pyc

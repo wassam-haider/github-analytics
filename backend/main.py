@@ -1,14 +1,9 @@
 import os
+import httpx
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-try:
-    import mlflow.sklearn
-    import dagshub
-    ML_LIBS_AVAILABLE = True
-except ImportError:
-    ML_LIBS_AVAILABLE = False
 
 app = FastAPI(title="GitHub Analytics API")
 
@@ -25,19 +20,32 @@ def get_db_connection():
     database_url = os.environ.get("DATABASE_URL", "postgresql://neondb_owner:npg_vDo51mBiPWMu@ep-soft-fire-at2q1e9e-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
     return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
 
-# Attempt to load MLflow model on startup
-ML_MODEL = None
-if ML_LIBS_AVAILABLE:
-    try:
-        repo_owner = os.environ.get("DAGSHUB_USER", "wassam-haider")
-        repo_name = os.environ.get("DAGSHUB_REPO", "github-analytics")
-        # Initialize Dagshub (sets up MLflow tracking URI)
-        dagshub.init(repo_owner=repo_owner, repo_name=repo_name, mlflow=True)
-        print("Loading model from MLflow registry...")
-        ML_MODEL = mlflow.sklearn.load_model("models:/repo-growth-predictor/latest")
-        print("Model loaded successfully.")
-    except Exception as e:
-        print(f"Warning: Could not load ML model on startup. Prediction endpoint will fail. {e}")
+# Hugging Face Space URL for ML inference
+HF_SPACE_URL = os.environ.get("HF_SPACE_URL", "").rstrip("/")
+
+async def call_hf_predict(stars: float, forks: float, contributors: float, commit_frequency: float) -> float:
+    """Forward a single prediction request to the Hugging Face Space."""
+    if not HF_SPACE_URL:
+        raise HTTPException(status_code=503, detail="Predictions temporarily unavailable — HF_SPACE_URL not configured.")
+    payload = {
+        "stars": stars,
+        "forks": forks,
+        "contributors": contributors,
+        "commit_frequency": commit_frequency,
+    }
+    # Generous timeout to handle HF Space cold-start (free tier sleeps after ~15 min idle)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.post(f"{HF_SPACE_URL}/predict", json=payload)
+            resp.raise_for_status()
+            return resp.json()["predicted_stars_next_month"]
+        except httpx.TimeoutException:
+            raise HTTPException(status_code=504, detail="Model is warming up — please retry in a few seconds.")
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=502, detail=f"Inference service error: {e.response.text}")
+        except Exception as e:
+            raise HTTPException(status_code=503, detail="Predictions temporarily unavailable.")
+
 
 @app.get("/api/overview")
 def get_overview():
@@ -71,7 +79,6 @@ def get_languages():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Fallback to direct grouping if table not yet populated by Spark
         cur.execute("""
             SELECT language, count(*) as repo_count 
             FROM repositories 
@@ -89,7 +96,6 @@ def get_top_contributors():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        # Check if contributor_scores table exists
         cur.execute("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'contributor_scores')")
         exists = cur.fetchone()['exists']
         
@@ -97,7 +103,6 @@ def get_top_contributors():
             cur.execute("SELECT * FROM contributor_scores ORDER BY score DESC LIMIT 10")
             return cur.fetchall()
         else:
-            # Fallback to base table
             cur.execute("""
                 SELECT username, SUM(contributions) as score 
                 FROM contributors 
@@ -127,10 +132,8 @@ def get_repo_health():
         conn.close()
 
 @app.get("/api/predict/{repo_id}")
-def predict_growth(repo_id: int):
-    if ML_MODEL is None:
-        raise HTTPException(status_code=503, detail="ML Model is not loaded")
-        
+async def predict_growth(repo_id: int):
+    """Predict star growth for a single repo — proxies to Hugging Face Space."""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
@@ -147,24 +150,22 @@ def predict_growth(repo_id: int):
         data = cur.fetchone()
         if not data:
             raise HTTPException(status_code=404, detail="Repository not found")
-            
-        features = [[
-            data['stars'] or 0,
-            data['forks'] or 0,
-            data['contributors_count'] or 0,
-            data['commit_frequency'] or 0
-        ]]
-        
-        prediction = ML_MODEL.predict(features)[0]
-        
-        return {
-            "repo_id": repo_id,
-            "current_stars": data['stars'],
-            "expected_stars_next_month": round(prediction, 2)
-        }
     finally:
         cur.close()
         conn.close()
+
+    predicted = await call_hf_predict(
+        stars=data['stars'] or 0,
+        forks=data['forks'] or 0,
+        contributors=data['contributors_count'] or 0,
+        commit_frequency=data['commit_frequency'] or 0,
+    )
+
+    return {
+        "repo_id": repo_id,
+        "current_stars": data['stars'],
+        "expected_stars_next_month": round(predicted, 2),
+    }
 
 @app.get("/api/repos/top")
 def get_top_repos():
@@ -214,7 +215,6 @@ def get_commit_trend():
         """)
         return cur.fetchall()
     except Exception:
-        # Fallback if commit_date column doesn't exist yet
         return []
     finally:
         cur.close()
@@ -222,11 +222,8 @@ def get_commit_trend():
 
 
 @app.get("/api/predictions/top-repos")
-def get_top_growth_predictions():
-    """Top 10 repos predicted to gain the most stars, using the loaded RandomForest model."""
-    if ML_MODEL is None:
-        raise HTTPException(status_code=503, detail="ML Model is not loaded")
-
+async def get_top_growth_predictions():
+    """Top 10 repos predicted to gain the most stars — proxies to Hugging Face Space."""
     conn = get_db_connection()
     cur = conn.cursor()
     try:
@@ -243,32 +240,29 @@ def get_top_growth_predictions():
             LIMIT 50
         """)
         repos = cur.fetchall()
-
-        results = []
-        for repo in repos:
-            features = [[
-                repo['stars']              or 0,
-                repo['forks']              or 0,
-                repo['contributors_count'] or 0,
-                repo['commit_frequency']   or 0,
-            ]]
-            predicted = ML_MODEL.predict(features)[0]
-            results.append({
-                "repo_id":         repo['id'],
-                "name":            repo['name'],
-                "current_stars":   repo['stars'],
-                "predicted_stars": round(predicted, 2),
-            })
-
-        # Sort by growth delta descending, return top 10
-        results.sort(key=lambda x: x['predicted_stars'] - x['current_stars'], reverse=True)
-        return results[:10]
     finally:
         cur.close()
         conn.close()
+
+    results = []
+    for repo in repos:
+        predicted = await call_hf_predict(
+            stars=repo['stars'] or 0,
+            forks=repo['forks'] or 0,
+            contributors=repo['contributors_count'] or 0,
+            commit_frequency=repo['commit_frequency'] or 0,
+        )
+        results.append({
+            "repo_id":         repo['id'],
+            "name":            repo['name'],
+            "current_stars":   repo['stars'],
+            "predicted_stars": round(predicted, 2),
+        })
+
+    results.sort(key=lambda x: x['predicted_stars'] - x['current_stars'], reverse=True)
+    return results[:10]
 
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-

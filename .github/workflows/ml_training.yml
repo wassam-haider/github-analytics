@@ -33,3 +33,24 @@ jobs:
           DAGSHUB_USER: ${{ vars.DAGSHUB_USER }}
           DAGSHUB_REPO: ${{ vars.DAGSHUB_REPO }}
         run: python train_model.py
+
+      - name: Push updated model.pkl to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE_REPO: ${{ vars.HF_SPACE_REPO }}
+        run: |
+          pip install huggingface_hub
+          python - <<'EOF'
+          import os
+          from huggingface_hub import HfApi
+          token = os.environ["HF_TOKEN"]
+          repo_id = os.environ["HF_SPACE_REPO"]
+          api = HfApi(token=token)
+          api.upload_file(
+              path_or_fileobj="model.pkl",
+              path_in_repo="model.pkl",
+              repo_id=repo_id,
+              repo_type="space",
+          )
+          print(f"model.pkl pushed to HF Space: {repo_id}")
+          EOF

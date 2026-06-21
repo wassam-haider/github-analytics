@@ -1,8 +1,10 @@
 name: ML Model Training
 
 on:
-  workflow_dispatch: # Allows manual trigger from the GitHub Actions UI
-  # You could also schedule this to run after the ETL pipeline (e.g. at 2:00 AM)
+  workflow_dispatch:
+  schedule:
+    # Run once a day at 2:00 AM UTC (after the ETL pipeline finishes)
+    - cron: "0 2 * * *"
 
 jobs:
   train-model:

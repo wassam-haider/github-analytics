@@ -1,6 +1,6 @@
 import os
-import psycopg
-from psycopg.rows import dict_row
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import mlflow.sklearn
@@ -19,7 +19,7 @@ app.add_middleware(
 
 def get_db_connection():
     database_url = os.environ.get("DATABASE_URL", "postgresql://neondb_owner:npg_vDo51mBiPWMu@ep-soft-fire-at2q1e9e-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
-    return psycopg.connect(database_url, row_factory=dict_row)
+    return psycopg2.connect(database_url, cursor_factory=RealDictCursor)
 
 # Attempt to load MLflow model on startup
 ML_MODEL = None

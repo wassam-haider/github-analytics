@@ -85,11 +85,11 @@ py -3.11 -m venv venv
 .\venv\Scripts\pip install -r backend\requirements.txt
 
 # Set credentials and start the server
-$env:DATABASE_URL         = "postgresql://neondb_owner:npg_vDo51mBiPWMu@ep-soft-fire-at2q1e9e-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-$env:DAGSHUB_USER_TOKEN   = "f78bf9295cf829abc78ea1cb61f948e50c4d859a"
-$env:MLFLOW_TRACKING_USERNAME = "wassam-haider"
-$env:MLFLOW_TRACKING_PASSWORD = "f78bf9295cf829abc78ea1cb61f948e50c4d859a"
-$env:DAGSHUB_USER         = "wassam-haider"
+$env:DATABASE_URL         = "postgresql://<user>:<password>@<host>/<dbname>?sslmode=require"
+$env:DAGSHUB_USER_TOKEN   = "<your-dagshub-token>"
+$env:MLFLOW_TRACKING_USERNAME = "<your-username>"
+$env:MLFLOW_TRACKING_PASSWORD = "<your-dagshub-token>"
+$env:DAGSHUB_USER         = "<your-username>"
 $env:DAGSHUB_REPO         = "github-analytics"
 
 cd backend
@@ -130,7 +130,7 @@ Dashboard will be live at: **http://localhost:5173**
 .\venv\Scripts\pip install -r requirements-etl.txt
 
 # Run the ETL
-$env:DATABASE_URL = "postgresql://neondb_owner:npg_vDo51mBiPWMu@ep-soft-fire-at2q1e9e-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+$env:DATABASE_URL = "postgresql://<user>:<password>@<host>/<dbname>?sslmode=require"
 .\venv\Scripts\python spark_etl.py
 ```
 
@@ -141,11 +141,11 @@ $env:DATABASE_URL = "postgresql://neondb_owner:npg_vDo51mBiPWMu@ep-soft-fire-at2
 ```powershell
 # From: d:\7thsem\bigdata\github-analytics\
 
-$env:DATABASE_URL             = "postgresql://..."
-$env:DAGSHUB_USER_TOKEN       = "f78bf9295cf829abc78ea1cb61f948e50c4d859a"
-$env:MLFLOW_TRACKING_USERNAME = "wassam-haider"
-$env:MLFLOW_TRACKING_PASSWORD = "f78bf9295cf829abc78ea1cb61f948e50c4d859a"
-$env:DAGSHUB_USER             = "wassam-haider"
+$env:DATABASE_URL             = "postgresql://<user>:<password>@<host>/<dbname>?sslmode=require"
+$env:DAGSHUB_USER_TOKEN       = "<your-dagshub-token>"
+$env:MLFLOW_TRACKING_USERNAME = "<your-username>"
+$env:MLFLOW_TRACKING_PASSWORD = "<your-dagshub-token>"
+$env:DAGSHUB_USER             = "<your-username>"
 $env:DAGSHUB_REPO             = "github-analytics"
 
 .\venv\Scripts\python train_model.py

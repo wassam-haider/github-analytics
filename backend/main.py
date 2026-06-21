@@ -3,8 +3,12 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import mlflow.sklearn
-import dagshub
+try:
+    import mlflow.sklearn
+    import dagshub
+    ML_LIBS_AVAILABLE = True
+except ImportError:
+    ML_LIBS_AVAILABLE = False
 
 app = FastAPI(title="GitHub Analytics API")
 
@@ -23,16 +27,17 @@ def get_db_connection():
 
 # Attempt to load MLflow model on startup
 ML_MODEL = None
-try:
-    repo_owner = os.environ.get("DAGSHUB_USER", "wassam-haider")
-    repo_name = os.environ.get("DAGSHUB_REPO", "github-analytics")
-    # Initialize Dagshub (sets up MLflow tracking URI)
-    dagshub.init(repo_owner=repo_owner, repo_name=repo_name, mlflow=True)
-    print("Loading model from MLflow registry...")
-    ML_MODEL = mlflow.sklearn.load_model("models:/repo-growth-predictor/latest")
-    print("Model loaded successfully.")
-except Exception as e:
-    print(f"Warning: Could not load ML model on startup. Prediction endpoint will fail. {e}")
+if ML_LIBS_AVAILABLE:
+    try:
+        repo_owner = os.environ.get("DAGSHUB_USER", "wassam-haider")
+        repo_name = os.environ.get("DAGSHUB_REPO", "github-analytics")
+        # Initialize Dagshub (sets up MLflow tracking URI)
+        dagshub.init(repo_owner=repo_owner, repo_name=repo_name, mlflow=True)
+        print("Loading model from MLflow registry...")
+        ML_MODEL = mlflow.sklearn.load_model("models:/repo-growth-predictor/latest")
+        print("Model loaded successfully.")
+    except Exception as e:
+        print(f"Warning: Could not load ML model on startup. Prediction endpoint will fail. {e}")
 
 @app.get("/api/overview")
 def get_overview():

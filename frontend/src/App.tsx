@@ -10,13 +10,14 @@ import Predictions from './pages/Predictions';
 import './index.css';
 
 const NAV_ITEMS = [
-  { to: '/',            icon: '📊', label: 'Overview' },
-  { to: '/languages',   icon: '🗂️',  label: 'Languages' },
-  { to: '/contributors',icon: '👥', label: 'Contributors' },
-  { to: '/health',      icon: '🩺', label: 'Repo Health' },
-  { to: '/repos',       icon: '⭐', label: 'Top Repositories' },
-  { to: '/commits',     icon: '📈', label: 'Commit Activity' },
-  { to: '/predictions', icon: '🔮', label: 'Predictions' },
+  { to: '/',            label: 'Overview' },
+  { to: '/languages',   label: 'Languages' },
+  { to: '/contributors',label: 'Contributors' },
+  { to: '/health',      label: 'Repo Health' },
+  { to: '/repos',       label: 'Top Repositories' },
+  { to: '/commits',     label: 'Commit Activity' },
+  { to: '/predictions', label: 'Predictions' },
+  { href: '/architecture.html', label: 'Architecture' },
 ];
 
 function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -39,16 +40,21 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         </div>
         <span className="sidebar-section-label">Dashboard</span>
         <ul className="sidebar-nav" role="list">
-          {NAV_ITEMS.map(({ to, icon, label }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) => isActive ? 'active' : ''}
-              >
-                <span className="nav-icon" aria-hidden="true">{icon}</span>
-                {label}
-              </NavLink>
+          {NAV_ITEMS.map((item) => (
+            <li key={item.to || item.href}>
+              {item.to ? (
+                <NavLink
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) => isActive ? 'active' : ''}
+                >
+                  {item.label}
+                </NavLink>
+              ) : (
+                <a href={item.href} target="_blank" rel="noopener noreferrer">
+                  {item.label}
+                </a>
+              )}
             </li>
           ))}
         </ul>

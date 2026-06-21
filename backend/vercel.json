@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "250mb"
+      }
+    }
+  ],
+  "env": {
+    "DAGSHUB_USER_TOKEN": "f78bf9295cf829abc78ea1cb61f948e50c4d859a",
+    "MLFLOW_TRACKING_USERNAME": "wassam-haider",
+    "MLFLOW_TRACKING_PASSWORD": "f78bf9295cf829abc78ea1cb61f948e50c4d859a",
+    "DAGSHUB_USER": "wassam-haider",
+    "DAGSHUB_REPO": "github-analytics"
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "main.py"
+    }
+  ]
+}

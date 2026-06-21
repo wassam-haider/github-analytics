@@ -1,0 +1,36 @@
+name: Spark ETL Pipeline
+
+on:
+  schedule:
+    # Run once a day at 1:00 AM UTC
+    - cron: "0 1 * * *"
+  workflow_dispatch: # Allows manual trigger from the GitHub Actions UI
+
+jobs:
+  run-etl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-etl.txt
+
+      - name: Run PySpark ETL
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python spark_etl.py

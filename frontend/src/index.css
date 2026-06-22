@@ -106,8 +106,10 @@ body {
   line-height: 1.6;
   color: var(--ink-charcoal);
   background-color: var(--paper-bg);
-  /* Paper grain texture via SVG noise overlay */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeBlend in='SourceGraphic' mode='multiply'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  /* Paper grain texture via SVG noise overlay + faint vignette */
+  background-image: 
+    radial-gradient(circle at center, transparent 40%, rgba(58,51,42,0.06) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
@@ -146,12 +148,15 @@ p {
 .sidebar {
   width: 240px;
   flex-shrink: 0;
-  background: var(--paper-panel);
-  border-right: 1px solid var(--cream-border);
+  /* Slightly darker paper tone than body for physical distinction */
+  background-color: var(--paper-panel-dark);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  border-right: 1px solid rgba(58,51,42,0.15); /* visible seam */
   display: flex;
   flex-direction: column;
   padding: var(--space-6) 0;
-  box-shadow: 2px 0 12px var(--soft-shadow);
+  /* separation shadow to suggest a butted-up sheet */
+  box-shadow: 4px 0 12px rgba(58,51,42,0.05), inset -2px 0 6px rgba(58,51,42,0.02);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -220,9 +225,13 @@ p {
 }
 
 .sidebar-nav a.active {
-  background: var(--olive);
-  color: var(--paper-panel);
-  box-shadow: var(--shadow-pressed);
+  background: rgba(107, 118, 84, 0.12); /* translucent olive */
+  color: var(--olive);
+  /* Carved IN shadow instead of raised */
+  box-shadow: 
+    inset 0 2px 4px rgba(58,51,42,0.15),
+    inset 0 -1px 0 rgba(255,255,255,0.4),
+    inset 2px 0 4px rgba(58,51,42,0.05);
 }
 
 .sidebar-nav a .nav-icon {
@@ -303,37 +312,41 @@ p {
 
 /* ---------- Paper Panel / Cards ---------- */
 .paper-panel {
-  background: var(--paper-panel);
-  border: 1px solid var(--cream-border);
-  border-radius: var(--radius-lg);
+  background-color: var(--paper-panel);
+  border: none;
+  border-radius: 6px 4px 6px 5px;
   padding: var(--space-6);
-  box-shadow: var(--shadow-panel);
-  /* Subtle embossed top highlight */
-  background-image: linear-gradient(
-    to bottom,
-    rgba(255,255,255,0.35) 0%,
-    rgba(255,255,255,0.0) 40%
-  );
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.4) inset, 
+    0 -1px 0 rgba(0,0,0,0.06) inset, 
+    0 8px 16px -4px rgba(58,51,42,0.25), 
+    0 2px 4px rgba(58,51,42,0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  position: relative;
 }
 
 .paper-card {
-  background: var(--paper-panel);
-  border: 1px solid var(--cream-border);
-  border-radius: var(--radius-lg);
+  background-color: var(--paper-panel);
+  border: none;
+  border-radius: 4px 6px 5px 4px;
   padding: var(--space-5);
-  box-shadow: var(--shadow-card);
-  background-image: linear-gradient(
-    to bottom,
-    rgba(255,255,255,0.4) 0%,
-    rgba(255,255,255,0.0) 50%
-  );
-  transition: box-shadow var(--transition-base);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.4) inset, 
+    0 -1px 0 rgba(0,0,0,0.06) inset, 
+    0 8px 16px -4px rgba(58,51,42,0.25), 
+    0 2px 4px rgba(58,51,42,0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  position: relative;
+  transition: transform 250ms ease-out, box-shadow 250ms ease-out;
 }
 
 .paper-card:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.6),
-    0 6px 20px rgba(58,51,42,0.28);
+  transform: translateY(-3px) scale(1.005);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.5) inset, 
+    0 -1px 0 rgba(0,0,0,0.04) inset, 
+    0 12px 24px -6px rgba(58,51,42,0.35), 
+    0 4px 8px rgba(58,51,42,0.2);
 }
 
 /* ---------- Stat Cards Grid (Overview) ---------- */
@@ -345,27 +358,57 @@ p {
 }
 
 .stat-card {
-  background: var(--paper-panel);
-  border: 1px solid var(--cream-border);
-  border-radius: var(--radius-lg);
+  background-color: var(--paper-panel);
+  border: none;
+  border-radius: 4px 5px 4px 6px; /* small irregular feeling */
   padding: var(--space-6);
-  box-shadow: var(--shadow-card);
-  background-image: linear-gradient(160deg, rgba(255,255,255,0.45) 0%, transparent 60%);
+  /* Layered carved-paper shadow */
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.4) inset, 
+    0 -1px 0 rgba(0,0,0,0.06) inset, 
+    0 8px 16px -4px rgba(58,51,42,0.25), 
+    0 2px 4px rgba(58,51,42,0.15);
+  /* Inside paper grain */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   position: relative;
   overflow: hidden;
+  transition: transform 250ms ease-out, box-shadow 250ms ease-out;
+}
+
+.stat-card:hover {
+  /* Lift and deepen shadow */
+  transform: translateY(-3px) scale(1.005);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.5) inset, 
+    0 -1px 0 rgba(0,0,0,0.04) inset, 
+    0 12px 24px -6px rgba(58,51,42,0.35), 
+    0 4px 8px rgba(58,51,42,0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card:hover {
+    transform: none;
+    box-shadow: 
+      0 1px 0 rgba(255,255,255,0.4) inset, 
+      0 -1px 0 rgba(0,0,0,0.06) inset, 
+      0 8px 16px -4px rgba(58,51,42,0.25), 
+      0 2px 4px rgba(58,51,42,0.15);
+  }
 }
 
 .stat-card::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 3px;
-  background: var(--olive);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  height: 4px;
+  background-color: var(--olive);
+  /* Stitched/rough taped look */
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 6px);
+  border-radius: 4px 5px 0 0;
 }
 
-.stat-card.amber::before { background: var(--burnt-amber); }
-.stat-card.rust::before  { background: var(--rust-red); }
+.stat-card.amber::before { background-color: var(--burnt-amber); }
+.stat-card.rust::before  { background-color: var(--rust-red); }
 
 .stat-label {
   font-family: var(--font-label);
@@ -390,6 +433,11 @@ p {
   margin-top: var(--space-2);
 }
 
+.stat-sparkline canvas {
+  mix-blend-mode: multiply;
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.4));
+}
+
 /* ---------- Charts Section ---------- */
 .charts-grid {
   display: grid;
@@ -398,11 +446,27 @@ p {
 }
 
 .chart-panel {
-  background: var(--paper-panel);
-  border: 1px solid var(--cream-border);
-  border-radius: var(--radius-lg);
+  background-color: var(--paper-panel);
+  border: none;
+  border-radius: 5px 4px 6px 5px;
   padding: var(--space-6);
-  box-shadow: var(--shadow-panel);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.4) inset, 
+    0 -1px 0 rgba(0,0,0,0.06) inset, 
+    0 8px 16px -4px rgba(58,51,42,0.25), 
+    0 2px 4px rgba(58,51,42,0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  position: relative;
+  transition: transform 250ms ease-out, box-shadow 250ms ease-out;
+}
+
+.chart-panel:hover {
+  transform: translateY(-3px) scale(1.005);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.5) inset, 
+    0 -1px 0 rgba(0,0,0,0.04) inset, 
+    0 12px 24px -6px rgba(58,51,42,0.35), 
+    0 4px 8px rgba(58,51,42,0.2);
 }
 
 .chart-title {
@@ -487,16 +551,32 @@ p {
 }
 
 .health-card {
-  background: var(--paper-panel);
-  border: 1px solid var(--cream-border);
-  border-radius: var(--radius-lg);
+  background-color: var(--paper-panel);
+  border: none;
+  border-radius: 4px 5px 6px 4px;
   padding: var(--space-5);
-  box-shadow: var(--shadow-card);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.4) inset, 
+    0 -1px 0 rgba(0,0,0,0.06) inset, 
+    0 8px 16px -4px rgba(58,51,42,0.25), 
+    0 2px 4px rgba(58,51,42,0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: var(--space-3);
+  position: relative;
+  transition: transform 250ms ease-out, box-shadow 250ms ease-out;
+}
+
+.health-card:hover {
+  transform: translateY(-3px) scale(1.005);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.5) inset, 
+    0 -1px 0 rgba(0,0,0,0.04) inset, 
+    0 12px 24px -6px rgba(58,51,42,0.35), 
+    0 4px 8px rgba(58,51,42,0.2);
 }
 
 .gauge-wrap {
@@ -560,14 +640,30 @@ p {
 }
 
 .forecast-card {
-  background: var(--paper-panel);
-  border: 1px solid var(--cream-border);
-  border-radius: var(--radius-lg);
+  background-color: var(--paper-panel);
+  border: none;
+  border-radius: 6px 4px 5px 6px;
   padding: var(--space-6);
-  box-shadow: var(--shadow-card);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.4) inset, 
+    0 -1px 0 rgba(0,0,0,0.06) inset, 
+    0 8px 16px -4px rgba(58,51,42,0.25), 
+    0 2px 4px rgba(58,51,42,0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  position: relative;
+  transition: transform 250ms ease-out, box-shadow 250ms ease-out;
+}
+
+.forecast-card:hover {
+  transform: translateY(-3px) scale(1.005);
+  box-shadow: 
+    0 1px 0 rgba(255,255,255,0.5) inset, 
+    0 -1px 0 rgba(0,0,0,0.04) inset, 
+    0 12px 24px -6px rgba(58,51,42,0.35), 
+    0 4px 8px rgba(58,51,42,0.2);
 }
 
 .forecast-card-title {

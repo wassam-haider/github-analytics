@@ -26,10 +26,12 @@ function Sparkline({ color }: { color: string }) {
       data: points.map(p => p.y),
       borderColor: color,
       borderWidth: 2,
+      borderCapStyle: 'round' as const,
+      borderJoinStyle: 'round' as const,
       pointRadius: 0,
       fill: true,
       backgroundColor: `${color}22`,
-      tension: 0.4,
+      tension: 0.15, // slightly more rigid/jagged for a hand-drawn feel
     }],
   };
   const opts = {
